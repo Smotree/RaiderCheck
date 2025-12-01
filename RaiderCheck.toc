@@ -1,0 +1,13 @@
+## Interface: 30300
+## Title: RaiderCheck
+## Notes: Проверка снаряжения и талантов в группе/рейде
+## Author: YourName
+## Version: 1.0.0
+## SavedVariables: RaiderCheckDB
+
+Core.lua
+Items.lua
+Talents.lua
+Professions.lua
+Inspect.lua
+GUI.lua
