@@ -45,29 +45,29 @@ function RaiderCheck:CreateInspectFrame()
 	-- Слоты для предметов
 	local slots = {
 		-- Левая сторона
-		{ name = "HeadSlot", x = 40, y = -50 },
-		{ name = "NeckSlot", x = 40, y = -90 },
-		{ name = "ShoulderSlot", x = 40, y = -130 },
-		{ name = "BackSlot", x = 40, y = -170 },
-		{ name = "ChestSlot", x = 40, y = -210 },
-		{ name = "ShirtSlot", x = 40, y = -250 },
-		{ name = "TabardSlot", x = 40, y = -290 },
-		{ name = "WristSlot", x = 40, y = -330 },
+		{ name = "HeadSlot", x = 30, y = -50 },
+		{ name = "NeckSlot", x = 30, y = -90 },
+		{ name = "ShoulderSlot", x = 30, y = -130 },
+		{ name = "BackSlot", x = 30, y = -170 },
+		{ name = "ChestSlot", x = 30, y = -210 },
+		{ name = "ShirtSlot", x = 30, y = -250 },
+		{ name = "TabardSlot", x = 30, y = -290 },
+		{ name = "WristSlot", x = 30, y = -330 },
 
 		-- Правая сторона
-		{ name = "HandsSlot", x = 344, y = -50 },
-		{ name = "WaistSlot", x = 344, y = -90 },
-		{ name = "LegsSlot", x = 344, y = -130 },
-		{ name = "FeetSlot", x = 344, y = -170 },
-		{ name = "Finger0Slot", x = 344, y = -210 },
-		{ name = "Finger1Slot", x = 344, y = -250 },
-		{ name = "Trinket0Slot", x = 344, y = -290 },
-		{ name = "Trinket1Slot", x = 344, y = -330 },
+		{ name = "HandsSlot", x = 324, y = -50 },
+		{ name = "WaistSlot", x = 324, y = -90 },
+		{ name = "LegsSlot", x = 324, y = -130 },
+		{ name = "FeetSlot", x = 324, y = -170 },
+		{ name = "Finger0Slot", x = 324, y = -210 },
+		{ name = "Finger1Slot", x = 324, y = -250 },
+		{ name = "Trinket0Slot", x = 324, y = -290 },
+		{ name = "Trinket1Slot", x = 324, y = -330 },
 
 		-- Оружие внизу
-		{ name = "MainHandSlot", x = 40, y = -410 },
-		{ name = "SecondaryHandSlot", x = 192, y = -410 },
-		{ name = "RangedSlot", x = 344, y = -410 },
+		{ name = "MainHandSlot", x = 152, y = -380 },
+		{ name = "SecondaryHandSlot", x = 192, y = -380 },
+		{ name = "RangedSlot", x = 232, y = -380 },
 	}
 
 	frame.itemSlots = {}
@@ -77,7 +77,7 @@ function RaiderCheck:CreateInspectFrame()
 		slotFrame:SetSize(37, 37)
 		slotFrame:SetPoint("TOPLEFT", slotInfo.x, slotInfo.y)
 
-		-- Фон слота
+		-- Фон слота4
 		slotFrame:SetNormalTexture("Interface\\PaperDoll\\UI-PaperDoll-Slot-" .. slotInfo.name)
 
 		-- Иконка предмета
@@ -130,7 +130,7 @@ function RaiderCheck:CreateInspectFrame()
 
 	-- Информация о талантах
 	local talentLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	talentLabel:SetPoint("TOP", 0, -455)
+	talentLabel:SetPoint("TOP", 0, -420)
 	talentLabel:SetText("Специализация:")
 
 	local talentText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -213,24 +213,31 @@ function RaiderCheck:UpdateInspectFrameItems(playerName, playerData)
 		LegsSlot = true,
 		FeetSlot = true,
 		MainHandSlot = true,
+		SecondaryHandSlot = true,
+		RangedSlot = true,
 	}
 
-	-- DEBUG: Проверяем количество слотов
+	-- Добавляем кольца для энчантеров
+	if playerData and playerData.professions then
+		for _, prof in ipairs(playerData.professions) do
+			if prof.name == "Enchanting" or prof.name == "Наложение чар" then
+				enchantableSlots.Finger0Slot = true
+				enchantableSlots.Finger1Slot = true
+				break
+			end
+		end
+	end
+
 	local slotCount = 0
 	for _ in pairs(self.inspectFrame.itemSlots) do
 		slotCount = slotCount + 1
 	end
-	print(string.format("[DEBUG] Всего слотов в окне: %d", slotCount))
 
-	-- DEBUG: Выводим имена всех слотов
 	for slotName, _ in pairs(self.inspectFrame.itemSlots) do
 		local slotId = GetInventorySlotInfo(slotName)
-		print(string.format("[DEBUG] Окно имеет слот: %s (ID %d)", slotName, slotId or 0))
 	end
 
 	for slotName, slotFrame in pairs(self.inspectFrame.itemSlots) do
-		print(string.format("[DEBUG LOOP] Начало обработки слота: %s", slotName))
-
 		local success, err = pcall(function()
 			-- Очищаем слот
 			slotFrame.icon:SetTexture(nil)
