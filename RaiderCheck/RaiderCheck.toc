@@ -1,7 +1,7 @@
 ## Interface: 30300
 ## Title: RaiderCheck
 ## Notes: Проверка снаряжения и талантов в группе/рейде
-## Author: YourName
+## Author: Smotree
 ## Version: 1.0.0
 ## SavedVariables: RaiderCheckDB
 
