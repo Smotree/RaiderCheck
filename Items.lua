@@ -770,13 +770,6 @@ function RaiderCheck:CheckGemQuality(playerData)
 	local minQuality = self:GetMinGemQuality()
 	local minPriority = self:GetGemPriorityValue(minQuality)
 
-	print(
-		"|cFF00FF00RaiderCheck Debug:|r Минимальное качество:",
-		minQuality,
-		"приоритет:",
-		minPriority
-	)
-
 	-- Проверяем все предметы на наличие камней
 	for slotId, itemInfo in pairs(playerData.items) do
 		if itemInfo.gems and #itemInfo.gems > 0 then

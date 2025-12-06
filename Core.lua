@@ -609,13 +609,6 @@ function RaiderCheck:UpdateOwnData(forceUpdate)
 		timestamp = time(),
 	}
 
-	-- Debug: проверяем качество камней
-	if self.CheckGemQuality then
-		print("|cFF00FF00RaiderCheck Debug:|r Проверка качества камней для " .. playerName)
-		local _, count = self:CheckGemQuality(self.playerData[playerName])
-		print("|cFF00FF00RaiderCheck Debug:|r Найдено устаревших камней: " .. count)
-	end
-
 	-- Сброс флага изменений
 	self.ownDataCache.changeDetected = false
 end
