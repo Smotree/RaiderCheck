@@ -1,0 +1,2 @@
+Move folder RaiderCheck into folder /addons
+Переместите папку RaiderCheck в папку /Addons
