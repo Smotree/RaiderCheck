@@ -250,17 +250,46 @@ function RaiderCheck:CreatePlayerFrame(playerName, index)
 	nameText:SetTextColor(classColor.r * 1.2, classColor.g * 1.2, classColor.b * 1.2, 1)
 	nameText:SetText(playerName)
 
-	-- Проверка наличия аддона
-	local hasAddon = self.players[playerName] == true or self.playerData[playerName] ~= nil
+	-- Проверка наличия аддона (включая WeakAura модуль)
+	local hasAddon = self.players[playerName] ~= nil
+		or self.playerData[playerName] ~= nil
+		or (
+			RaiderCheckWeakAuras
+			and RaiderCheckWeakAuras.GetPlayerData
+			and RaiderCheckWeakAuras:GetPlayerData(playerName) ~= nil
+		)
+
+	-- Определяем тип клиента
+	local clientType = "RC" -- По умолчанию
+	if self.players[playerName] then
+		clientType = self.players[playerName]
+	elseif playerName == UnitName("player") and RaiderCheckWeakAuras then
+		clientType = "WA"
+	elseif playerName == UnitName("player") then
+		clientType = "RC"
+	end
+
+	-- Если это сам игрок и у него установлен WeakAuras модуль - считаем что аддон есть
+	if playerName == UnitName("player") and RaiderCheckWeakAuras then
+		hasAddon = true
+		clientType = "WA"
+	elseif playerName == UnitName("player") then
+		hasAddon = true
+		clientType = "RC"
+	end
 
 	-- Иконка статуса аддона
 	local statusIcon = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-	statusIcon:SetPoint("TOPLEFT", 15, -34)
-	statusIcon:SetFont("Fonts\\FRIZQT__.TTF", 16)
+	statusIcon:SetPoint("TOPLEFT", 10, -34)
+	statusIcon:SetFont("Fonts\\FRIZQT__.TTF", 14)
 
 	if hasAddon then
-		statusIcon:SetText("+")
-		statusIcon:SetTextColor(0.2, 1, 0.3, 1)
+		statusIcon:SetText(clientType)
+		if clientType == "WA" then
+			statusIcon:SetTextColor(0.6, 0.3, 0.9, 1) -- Фиолетовый для WA
+		else
+			statusIcon:SetTextColor(0.2, 1, 0.3, 1) -- Зеленый для RC
+		end
 	else
 		statusIcon:SetText("-")
 		statusIcon:SetTextColor(1, 0.3, 0.2, 1)
@@ -328,11 +357,11 @@ function RaiderCheck:CreatePlayerFrame(playerName, index)
 
 		-- Информация о профессиях (компактный формат)
 		local profText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-		profText:SetPoint("TOPLEFT", 170, -36)
+		profText:SetPoint("TOPLEFT", 200, -36)
 		profText:SetFont("Fonts\\FRIZQT__.TTF", 10)
 
 		local profText2 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-		profText2:SetPoint("TOPLEFT", 170, -54)
+		profText2:SetPoint("TOPLEFT", 200, -54)
 		profText2:SetFont("Fonts\\FRIZQT__.TTF", 10)
 
 		if self.AnalyzePlayerProfessions then
@@ -612,7 +641,7 @@ function RaiderCheck:GetGroupPlayers()
 			-- Основной игрок идет в начало
 			table.insert(sorted, playerName)
 		else
-			local hasAddon = self.players[playerName] == true or self.playerData[playerName] ~= nil
+			local hasAddon = self.players[playerName] ~= nil or self.playerData[playerName] ~= nil
 			if hasAddon then
 				table.insert(withAddon, playerName)
 			else

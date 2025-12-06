@@ -15,7 +15,7 @@ local MSG_TALENTS = "TALENTS" -- Отправка данных о таланта
 local MSG_PROFESSIONS = "PROFESSIONS" -- Отправка данных о профессиях
 
 -- База данных игроков с аддоном
-RaiderCheck.players = {}
+RaiderCheck.players = {} -- true или тип клиента ("RC", "WA")
 RaiderCheck.playerData = {}
 RaiderCheck.eventFrame = nil
 
@@ -299,10 +299,16 @@ function RaiderCheck:CHAT_MSG_ADDON(prefix, message, distribution, sender)
 
 	if msgType == MSG_PING then
 		-- Ответ на ping
-		self:SendMessage(MSG_PONG, VERSION, "WHISPER", sender)
+		self:SendMessage(MSG_PONG, VERSION .. "-rc", "WHISPER", sender)
 	elseif msgType == MSG_PONG then
-		-- Регистрация игрока с аддоном
-		self.players[sender] = true
+		-- Регистрация игрока с аддоном и определение типа
+		if data and string.find(data, "%-wa") then
+			self.players[sender] = "WA"
+		elseif data and string.find(data, "%-rc") then
+			self.players[sender] = "RC"
+		else
+			self.players[sender] = "RC" -- По умолчанию RC (старые версии)
+		end
 
 		-- Определяем тип клиента по версии (если содержит "-module" или "-external" - это не основной аддон)
 		if data and string.find(data, "%-module") then
