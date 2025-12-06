@@ -1,0 +1,20 @@
+## Interface: 30300
+## Title: RaiderCheck
+## Notes: Проверка игроков в рейде/группе
+## Author: Smotree
+## Version: 1.1.0
+## SavedVariables: RaiderCheckDB
+
+Core.lua
+GemsDatabase.lua
+GemsEnchantMapping.lua
+GemSettings.lua
+Items.lua
+TalentsDatabase.lua
+Talents.lua
+TalentTree.lua
+Professions.lua
+Inspect.lua
+TalentsInspect.lua
+GUI.lua
+ErrorReportGUI.lua
