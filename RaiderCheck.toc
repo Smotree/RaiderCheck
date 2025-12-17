@@ -2,19 +2,29 @@
 ## Title: RaiderCheck
 ## Notes: Проверка игроков в рейде/группе
 ## Author: Smotree
-## Version: 1.1.0
-## SavedVariables: RaiderCheckDB
+## Version: 2.0.0
+## SavedVariables: RaiderCheckDB, RaiderCheck_UnknownGems
+## X-Sirus-Update: https://github.com/Smotree/RaiderCheck/tree/main
 
-Core.lua
-GemsDatabase.lua
+# External Data Files
 GemsEnchantMapping.lua
-GemSettings.lua
-Items.lua
 TalentsDatabase.lua
-Talents.lua
-TalentTree.lua
-Professions.lua
-Inspect.lua
-TalentsInspect.lua
-GUI.lua
-ErrorReportGUI.lua
+
+# Data Layer
+data\constants.lua
+data\items.lua
+data\settings.lua
+
+# Logic Layer
+logic\gear_analysis.lua
+logic\talents.lua
+
+# Core Layer
+core\init.lua
+core\comm.lua
+
+# UI Layer
+ui\gui.lua
+ui\inspect.lua
+ui\talents_inspect.lua
+ui\error_report.lua

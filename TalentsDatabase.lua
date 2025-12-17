@@ -2855,7 +2855,7 @@ RaiderCheck_TalentsDB["ROGUE"] = {
 			spellID = 14195,
 		},
 		[17] = {
-			name = "Убий������тво",
+			name = "Убийcтво",
 			icon = "Interface\\Icons\\Spell_Shadow_DeathScream",
 			tier = 6,
 			column = 3,
@@ -5742,7 +5742,7 @@ RaiderCheck_TalentsDB["DRUID"] = {
 			spellID = 16940,
 		},
 		[14] = {
-			name = "З��е��иная атака",
+			name = "Зве��������иная атака",
 			icon = "Interface\\Icons\\Ability_Hunter_Pet_Bear",
 			tier = 5,
 			column = 3,

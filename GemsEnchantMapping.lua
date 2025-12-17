@@ -829,6 +829,9 @@ RaiderCheck_GemItemToType = {
 	[41400] = "РБК+", -- Громовой алмаз небесного сияния",
 	[41401] = "РБК+", -- Провидческий алмаз землеправителя (+21 интеллекту и вероятность восполнить ману при применении заклинаний)",
 
+	[60114] = "РБК+", -- "Слеза забвения (+15 ко всем характеристикам)",
+	[60116] = "НРБК", -- "Слеза Миража (+18 ко всем характеристикам)",
+	[60117] = "ННРБК", -- "Слеза Утопии (+20 ко всем характеристикам)",
 	-- РБК (123 gems) - приоритет 3
 	[36766] = "НРБК", -- Яркое Око дракона (+80 силе атаки)
 	[36767] = "НРБК", -- Цельное Око дракона (+60 выносливости)
@@ -952,6 +955,7 @@ RaiderCheck_GemItemToType = {
 	[104106] = "РБК", -- Треснутая крепкая яшма
 	[149184] = "РБК", -- Стойкое Око дракона (+40 рейтингу блокирования щитом)
 	[149185] = "РБК", -- Непоколебимое Око дракона
+	[49110] = "РБК", -- Слеза кошмаров (+10 ко всем характеристикам)
 
 	-- ЛК (73 gems) - приоритет 2
 	[40111] = "ЛК", -- Рельефный багровый рубин (+20 силе)
@@ -1030,6 +1034,8 @@ RaiderCheck_GemItemToType = {
 	[60110] = "ЛК", -- Непоколебимый багровый рубин (+61 показателю блокирования щитом)
 
 	-- БК (118 gems) - приоритет 1
+	[39998] = "ЛК", -- Рунический алый рубин (+19 к силе заклинаний)
+	[40014] = "ЛК", -- Прочное сияние осени (+16 к рейтингу меткости)
 	[71817] = "БК", -- Прочный иолит Подземья
 	[71818] = "БК", -- Грозовой иолит Подземья
 	[71819] = "БК", -- Искрящийся иолит Подземья (+34 духу)
@@ -1203,7 +1209,33 @@ end
 -- Debug: Clear unknown gems log
 function RaiderCheck_ClearUnknownGems()
 	RaiderCheck_UnknownGems = {}
-	print("|cFF00FF00[RaiderCheck]|r Лог неизвестных самоцветов очищен")
 end
 
-print("|cFF00FF00RaiderCheck GemsMapping:|r Загружено гемов: 1074")
+-- Initialize unknown gems storage
+RaiderCheck_UnknownGems = {}
+
+-- Add unknown gem to log (with deduplication)
+function RaiderCheck_AddUnknownGem(itemId, itemName, itemLink, slotName, playerName)
+	if not itemId then
+		return
+	end
+
+	-- Check if already logged
+	for _, gem in ipairs(RaiderCheck_UnknownGems) do
+		if gem.itemId == itemId then
+			return false -- Already exists
+		end
+	end
+
+	-- Add new unknown gem
+	table.insert(RaiderCheck_UnknownGems, {
+		itemId = itemId,
+		itemName = itemName or "Unknown",
+		itemLink = itemLink,
+		slotName = slotName,
+		playerName = playerName,
+		timestamp = time(),
+	})
+
+	return true -- New gem added
+end

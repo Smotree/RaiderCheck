@@ -3,49 +3,30 @@
 -- Минималистичный модуль для WeakAuras
 -- Функции: Приём PING, отправка данных
 -- ============================================
--- Версия: 1.0.0
+-- Версия: 1.4.0
 -- Использование: Вставить в WeakAuras как Custom Code
 -- ============================================
 
+-- Предотвращаем повторную инициализацию
+if RaiderCheckWeakAuras and RaiderCheckWeakAuras.initialized then
+	return
+end
+
 RaiderCheckWeakAuras = RaiderCheckWeakAuras or {}
-RaiderCheckWeakAuras.VERSION = "1.0.0"
+RaiderCheckWeakAuras.VERSION = "1.4.0"
 
 -- Локальные данные
 local playerData = {}
-local pendingRequests = {}
-local lastPingResponse = 0
 
--- Счетчик экземпляров для защиты от дублей
-RaiderCheckWeakAuras._instanceCount = (RaiderCheckWeakAuras._instanceCount or 0) + 1
-RaiderCheckWeakAuras.isActive = (RaiderCheckWeakAuras._instanceCount == 1)
+-- Debounce система для отправки UPDATE при изменении экипировки
+local pendingUpdate = false
+local UPDATE_DEBOUNCE = 3 -- секунды
 
 -- ============================================
--- ИНИЦИАЛИЗАЦИЯ
+-- ВСЕ ФУНКЦИИ ОПРЕДЕЛЯЕМ СНАЧАЛА
 -- ============================================
 
--- Создаем фрейм для обработки событий
-if not RaiderCheckWeakAuras.frame then
-	RaiderCheckWeakAuras.frame = CreateFrame("Frame")
-	RaiderCheckWeakAuras.frame:SetScript("OnEvent", function(_, event, ...)
-		if RaiderCheckWeakAuras[event] then
-			RaiderCheckWeakAuras[event](RaiderCheckWeakAuras, ...)
-		end
-	end)
-
-	-- Регистрируем события
-	RaiderCheckWeakAuras.frame:RegisterEvent("CHAT_MSG_ADDON")
-	RaiderCheckWeakAuras.frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-
-	-- Регистрируем префикс
-	if RegisterAddonPrefix then
-		pcall(RegisterAddonPrefix, "RaiderCheck")
-	end
-end
-
--- ============================================
--- ОТПРАВКА СООБЩЕНИЙ
--- ============================================
-
+-- Отправка сообщений
 function RaiderCheckWeakAuras:SendMessage(msgType, data, target)
 	local fullMessage = msgType .. ":" .. (data or "")
 
@@ -57,9 +38,58 @@ function RaiderCheckWeakAuras:SendMessage(msgType, data, target)
 	end
 end
 
--- ============================================
--- СБОР И ОТПРАВКА ДАННЫХ
--- ============================================
+-- Вспомогательные функции для парсинга предметов
+function RaiderCheckWeakAuras:GetItemId(itemLink)
+	if not itemLink then
+		return nil
+	end
+	local itemId = itemLink:match("item:(%d+)")
+	return itemId
+end
+
+function RaiderCheckWeakAuras:GetEnchantId(itemLink)
+	if not itemLink then
+		return nil
+	end
+	local enchantId = itemLink:match("item:%d+:(%d+)")
+	return enchantId ~= "0" and enchantId or nil
+end
+
+function RaiderCheckWeakAuras:GetGemIds(slotId, itemLink)
+	if not itemLink then
+		return {}, 0
+	end
+
+	local gemIds = {}
+	local totalSockets = 0
+
+	-- Используем GetItemGem для получения камней (не открывает UI)
+	for i = 1, 3 do
+		local gemName, gemLink = GetItemGem(itemLink, i)
+		if gemLink and gemLink ~= "" then
+			-- Парсим gem link чтобы получить item ID камня
+			local gemItemId = gemLink:match("item:(%d+)")
+			if gemItemId then
+				local gemItemIdNum = tonumber(gemItemId)
+				if gemItemIdNum then
+					table.insert(gemIds, gemItemIdNum)
+				end
+			end
+		end
+	end
+
+	-- Получаем количество сокетов через GetItemStats (не открывает UI)
+	local stats = GetItemStats and GetItemStats(itemLink) or nil
+	if stats then
+		totalSockets = (stats["EMPTY_SOCKET_RED"] or 0)
+			+ (stats["EMPTY_SOCKET_YELLOW"] or 0)
+			+ (stats["EMPTY_SOCKET_BLUE"] or 0)
+			+ (stats["EMPTY_SOCKET_META"] or 0)
+			+ (stats["EMPTY_SOCKET_PRISMATIC"] or 0)
+	end
+
+	return gemIds, totalSockets
+end
 
 function RaiderCheckWeakAuras:CollectItemsData()
 	local items = {}
@@ -93,7 +123,6 @@ function RaiderCheckWeakAuras:CollectItemsData()
 			local itemId = self:GetItemId(itemLink)
 			local gemIds, totalSockets = self:GetGemIds(slotId, itemLink)
 
-			-- Кодируем itemLink
 			local encodedLink = itemLink:gsub(":", "~")
 
 			table.insert(
@@ -114,56 +143,6 @@ function RaiderCheckWeakAuras:CollectItemsData()
 	return table.concat(items, ";")
 end
 
--- Вспомогательные функции для парсинга предметов
-function RaiderCheckWeakAuras:GetItemId(itemLink)
-	if not itemLink then
-		return nil
-	end
-	local itemId = itemLink:match("item:(%d+)")
-	return itemId
-end
-
-function RaiderCheckWeakAuras:GetEnchantId(itemLink)
-	if not itemLink then
-		return nil
-	end
-	local enchantId = itemLink:match("item:%d+:(%d+)")
-	return enchantId ~= "0" and enchantId or nil
-end
-
-function RaiderCheckWeakAuras:GetGemIds(slotId, itemLink)
-	if not itemLink then
-		return {}, 0
-	end
-
-	local gemIds = {}
-	local totalSockets = 0
-
-	-- Используем Socket API для точного определения сокетов
-	SocketInventoryItem(slotId)
-	totalSockets = GetNumSockets() or 0
-
-	-- Получаем ID каждого вставленного камня
-	for i = 1, totalSockets do
-		local gemLink = GetExistingSocketLink(i)
-		if gemLink then
-			-- Парсим gemLink: |Hitem:itemId:0:0:0:0:0:0:0:80
-			local parts = { strsplit(":", gemLink) }
-			local gemItemId = parts[2]
-			if gemItemId and gemItemId ~= "" and gemItemId ~= "0" then
-				local gemItemIdNum = tonumber(gemItemId)
-				if gemItemIdNum then
-					table.insert(gemIds, gemItemIdNum)
-				end
-			end
-		end
-	end
-
-	CloseSocketInfo()
-
-	return gemIds, totalSockets
-end
-
 function RaiderCheckWeakAuras:CollectTalentsData()
 	local treesData = {}
 
@@ -171,45 +150,27 @@ function RaiderCheckWeakAuras:CollectTalentsData()
 		local numTalents = GetNumTalents(tabIndex)
 		local talentsInfo = {}
 
-		-- Собираем только индекс и ранг для каждого таланта
 		for talentIndex = 1, numTalents do
 			local name, icon, tier, column, rank = GetTalentInfo(tabIndex, talentIndex)
-
-			-- Формат: talentIndex~rank (как в основном аддоне)
 			local rankVal = rank or 0
 			table.insert(talentsInfo, talentIndex .. "~" .. rankVal)
 		end
 
-		-- Объединяем таланты через запятую
 		table.insert(treesData, table.concat(talentsInfo, ","))
 	end
 
-	-- Формат: tree1|tree2|tree3
 	return table.concat(treesData, "|")
 end
 
 function RaiderCheckWeakAuras:CollectProfessionsData()
 	local professionsData = {}
-
-	-- В WoW 3.3.5 используем GetNumSkillLines() и GetSkillLineInfo()
 	local numSkills = GetNumSkillLines()
 
-	-- Список профессий по категориям
-	local professionCategories = {
-		["Профессии"] = true,
-		["Профессия"] = true,
-		["Вторичные навыки"] = true,
-		["Secondary Skills"] = true,
-		["Professions"] = true,
-	}
-
 	for i = 1, numSkills do
-		local skillName, isHeader, isExpanded, skillRank, numTempPoints, skillModifier, skillMaxRank, isAbandonable, stepCost, rankCost, minLevel, skillCostType, skillDescription =
+		local skillName, isHeader, isExpanded, skillRank, numTempPoints, skillModifier, skillMaxRank, isAbandonable =
 			GetSkillLineInfo(i)
 
-		-- Проверяем что это профессия (не заголовок и можно забыть)
 		if skillName and not isHeader and isAbandonable and skillMaxRank and skillMaxRank > 1 then
-			-- Форматируем: название:текущий_уровень:максимальный_уровень
 			table.insert(professionsData, string.format("%s:%d:%d", skillName, skillRank or 0, skillMaxRank or 0))
 		end
 	end
@@ -227,7 +188,6 @@ function RaiderCheckWeakAuras:SendOwnData(target)
 	local talentsData = self:CollectTalentsData()
 	local professionsData = self:CollectProfessionsData()
 
-	-- Разбиваем данные о предметах на 3 части (как в основном аддоне)
 	local itemsParts = {}
 	for part in itemsData:gmatch("[^;]+") do
 		table.insert(itemsParts, part)
@@ -251,7 +211,6 @@ function RaiderCheckWeakAuras:SendOwnData(target)
 		end
 	end
 
-	-- Отправляем каждый тип данных отдельно
 	self:SendMessage("ITEMS1", table.concat(items1, ";"), target)
 	self:SendMessage("ITEMS2", table.concat(items2, ";"), target)
 	self:SendMessage("ITEMS3", table.concat(items3, ";"), target)
@@ -266,104 +225,60 @@ function RaiderCheckWeakAuras:SendOwnData(target)
 	}
 end
 
--- ============================================
--- ОБРАБОТКА СООБЩЕНИЙ
--- ============================================
-
-function RaiderCheckWeakAuras:CHAT_MSG_ADDON(prefix, message, distribution, sender)
-	if prefix ~= "RaiderCheck" then
-		return
-	end
-	if sender == UnitName("player") then
+-- Отправка UPDATE в группу (push-модель)
+function RaiderCheckWeakAuras:SendUpdate()
+	-- Проверяем что мы в группе
+	local numRaid = GetNumRaidMembers()
+	local numParty = GetNumPartyMembers()
+	if numRaid == 0 and numParty == 0 then
 		return
 	end
 
-	local msgType, data = message:match("^([^:]+):(.*)$")
-	if not msgType then
-		return
+	-- Отправляем UPDATE всем в группе
+	self:SendMessage("UPDATE", self.VERSION)
+
+	-- Сразу отправляем свои данные
+	self:SendOwnData()
+end
+
+-- Запланировать отправку UPDATE с debounce
+function RaiderCheckWeakAuras:ScheduleUpdate()
+	if pendingUpdate then
+		return -- Уже запланировано
 	end
 
-	-- PING - проверка наличия модуля
-	if msgType == "PING" then
-		if self.isActive then
-			lastPingResponse = GetTime()
-			-- Отправляем PONG с информацией что это WA модуль
-			self:SendMessage("PONG", self.VERSION .. "-wa", sender)
-		end
-	end
+	pendingUpdate = true
 
-	-- REQUEST - запрос данных
-	if msgType == "REQUEST" then
-		-- Отправляем свои данные
-		self:SendOwnData(sender)
-	end
-
-	-- Получение данных от других
-	if msgType == "ITEMS1" or msgType == "ITEMS2" or msgType == "ITEMS3" then
-		if not playerData[sender] then
-			playerData[sender] = { itemsParts = {} }
-		end
-		if not playerData[sender].itemsParts then
-			playerData[sender].itemsParts = {}
-		end
-
-		-- Сохраняем часть данных
-		if msgType == "ITEMS1" then
-			playerData[sender].itemsParts[1] = data
-		elseif msgType == "ITEMS2" then
-			playerData[sender].itemsParts[2] = data
-		elseif msgType == "ITEMS3" then
-			playerData[sender].itemsParts[3] = data
-		end
-
-		-- Когда все 3 части получены, объединяем
-		if
-			playerData[sender].itemsParts[1]
-			and playerData[sender].itemsParts[2]
-			and playerData[sender].itemsParts[3]
-		then
-			local fullItemsData = playerData[sender].itemsParts[1]
-				.. ";"
-				.. playerData[sender].itemsParts[2]
-				.. ";"
-				.. playerData[sender].itemsParts[3]
-			playerData[sender].items = fullItemsData
-			playerData[sender].itemsParts = nil -- Очищаем временные данные
-		end
-
-		playerData[sender].timestamp = GetTime()
-	elseif msgType == "TALENTS" or msgType == "PROFESSIONS" then
-		if not playerData[sender] then
-			playerData[sender] = {}
-		end
-
-		if msgType == "ITEMS" then
-			playerData[sender].items = data
-		elseif msgType == "TALENTS" then
-			playerData[sender].talents = data
-		elseif msgType == "PROFESSIONS" then
-			playerData[sender].professions = data
-		end
-
-		playerData[sender].timestamp = GetTime()
+	-- Используем C_Timer если доступен, иначе OnUpdate
+	if C_Timer and C_Timer.After then
+		C_Timer.After(UPDATE_DEBOUNCE, function()
+			pendingUpdate = false
+			RaiderCheckWeakAuras:SendUpdate()
+		end)
+	else
+		-- Fallback через OnUpdate
+		local timerFrame = CreateFrame("Frame")
+		local elapsed = 0
+		timerFrame:SetScript("OnUpdate", function(self, delta)
+			elapsed = elapsed + delta
+			if elapsed >= UPDATE_DEBOUNCE then
+				self:SetScript("OnUpdate", nil)
+				pendingUpdate = false
+				RaiderCheckWeakAuras:SendUpdate()
+			end
+		end)
 	end
 end
 
--- ============================================
--- API ФУНКЦИИ
--- ============================================
-
--- Получить данные игрока
+-- API функции
 function RaiderCheckWeakAuras:GetPlayerData(playerName)
 	return playerData[playerName]
 end
 
--- Получить данные всех игроков
 function RaiderCheckWeakAuras:GetAllPlayerData()
 	return playerData
 end
 
--- Получить список игроков в рейде/группе
 function RaiderCheckWeakAuras:GetGroupMembers()
 	local members = {}
 
@@ -389,25 +304,140 @@ function RaiderCheckWeakAuras:GetGroupMembers()
 	return members
 end
 
--- Получить версию
 function RaiderCheckWeakAuras:GetVersion()
 	return self.VERSION
 end
 
--- Проверить загружен ли основной RaiderCheck
 function RaiderCheckWeakAuras:IsRaiderCheckLoaded()
 	return RaiderCheck ~= nil
 end
 
 -- ============================================
--- ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ
+-- ОБРАБОТЧИК СОБЫТИЙ (определяем ДО создания фрейма)
 -- ============================================
 
-print("|cFF00FF00RaiderCheckWeakAuras:|r v" .. RaiderCheckWeakAuras.VERSION .. " загружен")
+local function OnEvent(self, event, ...)
+	if event == "CHAT_MSG_ADDON" then
+		local prefix, message, distribution, sender = ...
+
+		if prefix ~= "RaiderCheck" then
+			return
+		end
+		if sender == UnitName("player") then
+			return
+		end
+
+		local msgType, data = message:match("^([^:]+):(.*)$")
+		if not msgType then
+			return
+		end
+
+		-- PING - проверка наличия модуля
+		if msgType == "PING" then
+			-- Отправляем PONG с информацией что это WA модуль
+			RaiderCheckWeakAuras:SendMessage("PONG", RaiderCheckWeakAuras.VERSION .. "-wa", sender)
+		end
+
+		-- REQUEST - запрос данных
+		if msgType == "REQUEST" then
+			RaiderCheckWeakAuras:SendOwnData(sender)
+		end
+
+		-- UPDATE - другой игрок изменил экипировку (принимаем его данные)
+		if msgType == "UPDATE" then
+			-- Данные придут следом через ITEMS1/2/3, TALENTS, PROFESSIONS
+			-- Ничего дополнительно делать не нужно
+		end
+
+		-- Получение данных от других
+		if msgType == "ITEMS1" or msgType == "ITEMS2" or msgType == "ITEMS3" then
+			if not playerData[sender] then
+				playerData[sender] = { itemsParts = {} }
+			end
+			if not playerData[sender].itemsParts then
+				playerData[sender].itemsParts = {}
+			end
+
+			if msgType == "ITEMS1" then
+				playerData[sender].itemsParts[1] = data
+			elseif msgType == "ITEMS2" then
+				playerData[sender].itemsParts[2] = data
+			elseif msgType == "ITEMS3" then
+				playerData[sender].itemsParts[3] = data
+			end
+
+			if
+				playerData[sender].itemsParts[1]
+				and playerData[sender].itemsParts[2]
+				and playerData[sender].itemsParts[3]
+			then
+				local fullItemsData = playerData[sender].itemsParts[1]
+					.. ";"
+					.. playerData[sender].itemsParts[2]
+					.. ";"
+					.. playerData[sender].itemsParts[3]
+				playerData[sender].items = fullItemsData
+				playerData[sender].itemsParts = nil
+			end
+
+			playerData[sender].timestamp = GetTime()
+		elseif msgType == "TALENTS" then
+			if not playerData[sender] then
+				playerData[sender] = {}
+			end
+			playerData[sender].talents = data
+			playerData[sender].timestamp = GetTime()
+		elseif msgType == "PROFESSIONS" then
+			if not playerData[sender] then
+				playerData[sender] = {}
+			end
+			playerData[sender].professions = data
+			playerData[sender].timestamp = GetTime()
+		end
+	elseif event == "PLAYER_EQUIPMENT_CHANGED" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
+		-- Push-модель: уведомляем группу об изменении экипировки/талантов
+		RaiderCheckWeakAuras:ScheduleUpdate()
+	end
+end
+
+-- ============================================
+-- ИНИЦИАЛИЗАЦИЯ (в самом конце, после всех функций)
+-- ============================================
+
+-- Регистрируем префикс
+if RegisterAddonPrefix then
+	pcall(RegisterAddonPrefix, "RaiderCheck")
+end
+
+-- Удаляем старый фрейм если есть
+if RaiderCheckWeakAuras.frame then
+	RaiderCheckWeakAuras.frame:UnregisterAllEvents()
+	RaiderCheckWeakAuras.frame:SetScript("OnEvent", nil)
+	RaiderCheckWeakAuras.frame = nil
+end
+
+-- Создаем новый фрейм
+RaiderCheckWeakAuras.frame = CreateFrame("Frame")
+
+-- Устанавливаем обработчик напрямую (функция уже определена выше!)
+RaiderCheckWeakAuras.frame:SetScript("OnEvent", OnEvent)
+
+-- Регистрируем события
+RaiderCheckWeakAuras.frame:RegisterEvent("CHAT_MSG_ADDON")
+RaiderCheckWeakAuras.frame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+RaiderCheckWeakAuras.frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+
+-- Помечаем как инициализированный
+RaiderCheckWeakAuras.initialized = true
+
+print(
+	"|cFF00FF00RaiderCheckWeakAuras:|r v"
+		.. RaiderCheckWeakAuras.VERSION
+		.. " загружен и готов к работе"
+)
+
 if RaiderCheckWeakAuras:IsRaiderCheckLoaded() then
 	print("|cFF00FF00RaiderCheckWeakAuras:|r RaiderCheck обнаружен")
 else
-	print(
-		"|cFFFF9900RaiderCheckWeakAuras:|r RaiderCheck не обнаружен (будет работать в режиме WA)"
-	)
+	print("|cFFFF9900RaiderCheckWeakAuras:|r RaiderCheck не обнаружен (работает автономно)")
 end
