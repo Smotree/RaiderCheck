@@ -29,7 +29,10 @@
 
 ## 📸 Скриншоты
 
-*Coming soon*
+<img width="628" height="488" alt="image" src="https://github.com/user-attachments/assets/2c088b3d-279b-4403-a803-64fa5fffe343" />
+<img width="212" height="453" alt="image" src="https://github.com/user-attachments/assets/1e35e45e-45d1-4e07-9a63-8de4990f68d4" />
+<img width="463" height="479" alt="image" src="https://github.com/user-attachments/assets/e9162e63-2b49-4b92-9f64-aef60383c17c" />
+
 
 ## 📦 Установка
 
